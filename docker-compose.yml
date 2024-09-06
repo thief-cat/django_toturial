@@ -1,0 +1,37 @@
+services:
+
+  db:
+    container_name: django-blog-db
+    image: arm64v8/mysql:8.0
+    volumes:
+      # - ./db/initialize:/docker-entrypoint-initdb.d
+      - ./db/config/my.cnf:/etc/mysql/conf.d/my.cnf
+    tty: true
+    restart: always
+    environment:
+      MYSQL_DATABASE: django_blog_db
+      MYSQL_USER: user
+      MYSQL_PASSWORD: password
+      MYSQL_ROOT_PASSWORD: root
+      TZ: 'Asia/Tokyo'
+    ports:
+      - "3306:3306"
+    healthcheck:
+      test: mysqladmin ping
+      interval: 5s
+      retries: 5
+
+  web:
+    container_name: django-blog-web
+    platform: 'linux/arm64'
+    build: ./docker
+    command: bash -c 'python manage.py migrate ; python manage.py runserver ${HOST}:${PORT}'
+    volumes:
+      - ./src:/code
+    ports:
+      - "8000:8000"
+    depends_on:
+      db:
+        condition: service_healthy
+    tty: true
+    stdin_open: true
