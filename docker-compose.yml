@@ -1,33 +1,34 @@
 services:
 
   db:
-    container_name: django-blog-db
-    image: arm64v8/mysql:8.0
+    container_name: django-db
+    image: arm64v8/postgres:latest
     volumes:
       # - ./db/initialize:/docker-entrypoint-initdb.d
-      - ./db/config/my.cnf:/etc/mysql/conf.d/my.cnf
+      # - ./db/config/my.cnf:/etc/mysql/conf.d/my.cnf
+      - db_volume:/var/lib/postgresql
     tty: true
-    restart: always
+    restart: no
     environment:
-      MYSQL_DATABASE: django_blog_db
-      MYSQL_USER: user
-      MYSQL_PASSWORD: password
-      MYSQL_ROOT_PASSWORD: root
+      POSTGRES_DB: ${DB_NAME}
+      POSTGRES_USER: ${DB_USER_NAME}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
       TZ: 'Asia/Tokyo'
     ports:
-      - "3306:3306"
+      - "5432:5432"
     healthcheck:
-      test: mysqladmin ping
+      test: pg_isready -U postgres
       interval: 5s
       retries: 5
 
   web:
-    container_name: django-blog-web
+    container_name: django-web
     platform: 'linux/arm64'
     build: ./docker
-    command: bash -c 'python manage.py migrate ; python manage.py runserver ${HOST}:${PORT}'
+    # command: bash -c 'python manage.py migrate ; python manage.py runserver ${HOST}:${PORT}'
     volumes:
       - ./src:/code
+      # - ../biz-gem/coding-interview:/code
     ports:
       - "8000:8000"
     depends_on:
@@ -35,3 +36,8 @@ services:
         condition: service_healthy
     tty: true
     stdin_open: true
+    command: bash -c 'pipenv run python manage.py runserver ${HOST}:${PORT}'
+
+volumes:
+  db_volume:
+  py_volume:
